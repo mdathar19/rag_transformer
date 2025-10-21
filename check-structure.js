@@ -6,7 +6,7 @@ async function checkStructure() {
 
     try {
         await client.connect();
-        const db = client.db('test_rag');
+        const db = client.db('brain_platform');
 
         // Get a sample document
         const sample = await db.collection('content').findOne({});

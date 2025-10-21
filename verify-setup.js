@@ -22,8 +22,8 @@ async function verifySetup() {
         console.log('✅ Successfully connected to MongoDB Atlas!\n');
 
         // Check database
-        const db = client.db('test_rag');
-        console.log('📊 Checking database: test_rag');
+        const db = client.db('brain_platform');
+        console.log('📊 Checking database: brain_platform');
 
         // List collections
         const collections = await db.listCollections().toArray();
@@ -61,7 +61,7 @@ async function verifySetup() {
         console.log('   3. Go to "Atlas Search" tab');
         console.log('   4. Click "Create Search Index"');
         console.log('   5. Choose "JSON Editor"');
-        console.log('   6. Select database: test_rag');
+        console.log('   6. Select database: brain_platform');
         console.log('   7. Select collection: content');
         console.log('   8. Index name: vector_index');
         console.log('   9. Paste this JSON configuration:\n');

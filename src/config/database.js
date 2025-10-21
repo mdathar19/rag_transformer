@@ -20,7 +20,7 @@ class Database {
             });
 
             await this.client.connect();
-            this.db = this.client.db('test_rag');
+            this.db = this.client.db('brain_platform');
 
             console.log('[Database] Connected to MongoDB Atlas successfully');
 

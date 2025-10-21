@@ -15,7 +15,7 @@
    - Click "Next"
 
 4. **Configure the Index**
-   - **Database**: `test_rag`
+   - **Database**: `brain_platform`
    - **Collection**: `content_chunks` (NOT content - we restructured the data)
    - **Index Name**: `vector_index`
 

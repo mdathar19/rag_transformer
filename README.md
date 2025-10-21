@@ -187,7 +187,7 @@ Headers: X-API-Key: PAYB18022021121103
 2. Choose **Drivers** → Select **Node.js**
 3. Copy connection string and update `.env`:
 ```
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/test_rag?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/brain_platform?retryWrites=true&w=majority
 ```
 
 #### Step 5: Create Vector Search Index (CRITICAL!)
@@ -201,7 +201,7 @@ MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/test_rag?retryWr
 5. Click **Create Search Index**
 6. Choose **JSON Editor** (not Visual Editor)
 7. Select:
-   - Database: `test_rag` (or any name - will be auto-created)
+   - Database: `brain_platform` (or any name - will be auto-created)
    - Collection: `content` (will be auto-created)
 8. **PASTE THIS EXACT JSON:**
 
@@ -227,7 +227,7 @@ MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/test_rag?retryWr
 When you delete and recreate the database:
 
 #### ✅ Auto-Created by Application:
-- Database `test_rag`
+- Database `brain_platform`
 - All collections (`clients`, `content`, `query_logs`, `crawl_jobs`)
 - Regular indexes for performance
 - Initial Paybito client record

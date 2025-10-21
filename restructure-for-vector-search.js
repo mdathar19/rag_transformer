@@ -8,7 +8,7 @@ async function restructureForVectorSearch() {
         await client.connect();
         console.log('Connected to MongoDB');
 
-        const db = client.db('test_rag');
+        const db = client.db('brain_platform');
         const contentCollection = db.collection('content');
         const contentChunksCollection = db.collection('content_chunks');
 

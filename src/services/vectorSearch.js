@@ -50,10 +50,10 @@ class VectorSearchService {
                         }
                     }
                 },
-                // Add search score
+                // Add search score - for $vectorSearch use vectorSearchScore
                 {
                     $addFields: {
-                        searchScore: { $meta: "searchScore" }
+                        searchScore: { $meta: "vectorSearchScore" }
                     }
                 },
                 // Filter by minimum score if needed

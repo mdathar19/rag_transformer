@@ -1,0 +1,16 @@
+{
+  "name": "vector_index",
+  "type": "vectorSearch",
+  "fields": [
+    {
+      "type": "vector",
+      "path": "embedding",
+      "numDimensions": 1536,
+      "similarity": "cosine"
+    },
+    {
+      "type": "filter",
+      "path": "brokerId"
+    }
+  ]
+}

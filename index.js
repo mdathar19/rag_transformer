@@ -14,6 +14,10 @@ const { corsMiddleware, errorHandler, requestLogger } = require('./src/middlewar
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy - required when behind nginx/load balancer
+// This allows express-rate-limit to correctly identify client IPs
+app.set('trust proxy', 1);
+
 // Create default admin user
 async function createDefaultAdmin() {
     try {

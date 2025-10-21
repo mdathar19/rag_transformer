@@ -1,0 +1,22 @@
+{
+  "fields": [
+    {
+      "type": "vector",
+      "path": "embedding",
+      "numDimensions": 1536,
+      "similarity": "cosine"
+    },
+    {
+      "type": "filter",
+      "path": "brokerId"
+    },
+    {
+      "type": "filter",
+      "path": "status"
+    },
+    {
+      "type": "filter",
+      "path": "contentType"
+    }
+  ]
+}

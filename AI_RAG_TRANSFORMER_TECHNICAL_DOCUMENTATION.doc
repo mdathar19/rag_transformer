@@ -1,0 +1,513 @@
+AI RAG TRANSFORMER - COMPLETE TECHNICAL DOCUMENTATION
+========================================================
+
+TABLE OF CONTENTS
+-----------------
+1. System Overview
+2. Database Architecture
+3. Data Flow Process
+4. Web Crawling Process
+5. Content Processing & Chunking
+6. Embedding Generation
+7. Vector Search Implementation
+8. Query Processing Pipeline
+9. OpenAI Integration
+10. API Endpoints
+11. Technical Specifications
+
+========================================================
+
+1. SYSTEM OVERVIEW
+------------------
+The AI RAG Transformer is a sophisticated multi-tenant Retrieval-Augmented Generation (RAG) system that automatically crawls websites, generates embeddings, stores them in MongoDB Atlas with vector search capabilities, and provides AI-powered answers using OpenAI's GPT models.
+
+Key Components:
+- Web Crawler: Automatically scrapes website content
+- Content Processor: Chunks and processes scraped content
+- Embedding Service: Generates vector embeddings using OpenAI
+- Vector Database: MongoDB Atlas with native vector search
+- RAG Pipeline: Combines retrieval and generation for answers
+- Cache Layer: Redis for performance optimization
+- Multi-tenant Support: Isolated data per client (broker)
+
+========================================================
+
+2. DATABASE ARCHITECTURE
+------------------------
+
+MongoDB Collections:
+
+A. CLIENTS COLLECTION
+---------------------
+Purpose: Stores client/broker information and configuration
+Fields:
+- brokerId: Unique identifier (e.g., "PAYB18022021121103")
+- name: Company name (e.g., "PayBito")
+- domain: Primary domain URL
+- domains: Array of multiple domains to crawl
+  - url: Domain URL
+  - type: "main" or "subdomain"
+  - crawlSettings: Max pages, depth, patterns
+  - specificPages: Array of specific URLs
+- baseUrl: Base URL for crawling
+- crawlSettings:
+  - maxPages: Maximum pages to crawl (default: 100)
+  - maxDepth: Maximum crawl depth (default: 3)
+  - crawlInterval: Time between crawls
+  - allowedPatterns: URL patterns to include
+  - excludePatterns: URL patterns to exclude
+  - respectRobotsTxt: Boolean (default: true)
+- metadata: Additional client information
+- status: "active", "inactive", "suspended"
+- noDataResponse: Custom message when no data found
+- lastCrawled: Timestamp of last crawl
+- nextScheduledCrawl: Next crawl timestamp
+- createdAt: Creation timestamp
+- updatedAt: Last update timestamp
+
+B. CONTENT COLLECTION
+---------------------
+Purpose: Stores crawled and processed content with embeddings
+Fields:
+- brokerId: Links to client
+- url: Source URL
+- domain: Source domain
+- title: Page title
+- description: Meta description
+- content: Full text content (cleaned)
+- chunks: Array of content chunks
+  - text: Chunk text (1000 tokens max)
+  - embedding: Vector embedding (1536 dimensions)
+  - position: Chunk position in document
+  - tokens: Token count
+  - metadata:
+    - startSentence: Starting sentence index
+    - endSentence: Ending sentence index
+    - type: "introduction", "content", "conclusion", etc.
+    - pageTitle: Original page title
+    - pageUrl: Source URL
+- embeddingModel: Model used (e.g., "text-embedding-3-small")
+- embeddingDimensions: Vector dimensions (1536)
+- totalChunks: Total number of chunks
+- totalTokens: Total token count
+- contentType: "homepage", "article", "product", etc.
+- pageRank: Calculated importance score
+- keywords: Extracted keywords array
+- metadata:
+  - author: Content author
+  - publishDate: Publication date
+  - lastModified: Last modification date
+  - headings: Array of H1-H6 headings
+  - images: Image URLs and alt texts
+  - links: Internal/external links
+  - customData: Client-specific data
+- crawledAt: Crawl timestamp
+- lastUpdated: Last update timestamp
+- version: Content version number
+
+C. CRAWL_JOBS COLLECTION
+------------------------
+Purpose: Tracks crawling jobs and their status
+Fields:
+- jobId: Unique job identifier
+- brokerId: Associated client
+- type: "manual", "scheduled", "update"
+- status: "pending", "running", "completed", "failed"
+- startedAt: Job start timestamp
+- completedAt: Job completion timestamp
+- duration: Job duration in milliseconds
+- statistics:
+  - pagesProcessed: Number of pages crawled
+  - pagesSkipped: Number of pages skipped
+  - errors: Array of error messages
+  - newPages: New pages discovered
+  - updatedPages: Updated existing pages
+- config: Crawl configuration used
+- nextUrl: Next URL to process (for resuming)
+- error: Error message if failed
+
+D. QUERY_LOGS COLLECTION
+------------------------
+Purpose: Analytics and query tracking
+Fields:
+- brokerId: Client identifier
+- query: User query text
+- results: Search results returned
+- answer: Generated answer
+- responseTime: Time to generate response
+- cached: Whether cache was used
+- timestamp: Query timestamp
+- sessionId: Chat session identifier
+
+========================================================
+
+3. DATA FLOW PROCESS
+--------------------
+
+Step 1: Client Registration
+- Client registered with unique brokerId
+- Domains and crawl settings configured
+- Custom no-data response message set
+
+Step 2: Web Crawling Initiation
+- Manual trigger via API or scheduled job
+- Crawl job created in crawl_jobs collection
+- Crawler respects robots.txt and rate limits
+
+Step 3: Content Extraction
+- HTML content fetched via axios
+- Content cleaned and extracted
+- Metadata (title, description, headings) captured
+- Links discovered for recursive crawling
+
+Step 4: Content Processing
+- Text cleaned (remove special chars, normalize)
+- Content chunked (1000 tokens per chunk)
+- Chunk overlap (100 tokens) for continuity
+- Metadata attached to each chunk
+
+Step 5: Embedding Generation
+- OpenAI text-embedding-3-small model used
+- Each chunk converted to 1536-dimensional vector
+- Embeddings stored with chunks in content collection
+
+Step 6: Database Storage
+- Content document created/updated
+- Vector index automatically maintained
+- Timestamp and version tracked
+
+Step 7: Query Processing
+- User query received via API
+- Query converted to embedding
+- Vector search performed
+- Results ranked by similarity
+
+Step 8: Answer Generation
+- Top relevant chunks retrieved
+- Context built from chunks
+- OpenAI GPT-4 generates answer
+- Response cached in Redis
+
+========================================================
+
+4. WEB CRAWLING PROCESS
+-----------------------
+
+Crawler Workflow:
+
+1. Initialization:
+   - Load client configuration
+   - Check robots.txt compliance
+   - Initialize URL queue with seed URLs
+
+2. URL Processing:
+   - Dequeue URL from processing queue
+   - Check if already crawled
+   - Verify URL patterns and depth
+
+3. Content Fetching:
+   - HTTP GET request with timeout (10s)
+   - Handle redirects (max 5)
+   - Respect rate limiting
+
+4. Content Extraction:
+   const cleanedContent = {
+     title: $('title').text(),
+     description: $('meta[name="description"]').attr('content'),
+     content: $('body').text(),
+     headings: extractHeadings($),
+     links: extractLinks($, baseUrl)
+   }
+
+5. Link Discovery:
+   - Extract all <a> tags
+   - Filter by allowed patterns
+   - Add to crawl queue if not visited
+
+6. Storage:
+   - Save to content collection
+   - Update crawl statistics
+   - Mark URL as processed
+
+========================================================
+
+5. CONTENT PROCESSING & CHUNKING
+---------------------------------
+
+Chunking Algorithm:
+
+1. Text Cleaning:
+   - Remove HTML entities
+   - Normalize whitespace
+   - Fix encoding issues
+   - Remove redundant punctuation
+
+2. Smart Chunking:
+   ```
+   maxChunkSize: 1000 tokens
+   chunkOverlap: 100 tokens
+   minChunkSize: 200 tokens
+   ```
+
+3. Sentence Boundary Detection:
+   - Split by sentence endings (. ! ?)
+   - Handle abbreviations (Dr., Mr., etc.)
+   - Preserve sentence integrity
+
+4. Chunk Optimization:
+   - Merge small chunks with neighbors
+   - Ensure semantic coherence
+   - Add context metadata
+
+5. Token Estimation:
+   tokens = (wordCount / 0.75 + charCount / 4) / 2
+
+========================================================
+
+6. EMBEDDING GENERATION
+-----------------------
+
+OpenAI Embedding Process:
+
+1. API Configuration:
+   Model: text-embedding-3-small
+   Dimensions: 1536
+   Batch Size: 20 chunks
+
+2. Generation Process:
+   ```javascript
+   const response = await openai.embeddings.create({
+     model: 'text-embedding-3-small',
+     input: chunkText,
+     dimensions: 1536
+   });
+   embedding = response.data[0].embedding;
+   ```
+
+3. Vector Properties:
+   - Dense vectors (no sparse representation)
+   - Normalized for cosine similarity
+   - Float32 precision
+
+4. Storage Format:
+   - Stored as array in MongoDB
+   - Indexed for vector search
+   - Linked to source chunk
+
+========================================================
+
+7. VECTOR SEARCH IMPLEMENTATION
+--------------------------------
+
+MongoDB Atlas Vector Search:
+
+1. Index Configuration:
+   ```json
+   {
+     "mappings": {
+       "dynamic": true,
+       "fields": {
+         "chunks.embedding": {
+           "dimensions": 1536,
+           "similarity": "cosine",
+           "type": "knnVector"
+         }
+       }
+     }
+   }
+   ```
+
+2. Search Pipeline:
+   ```javascript
+   pipeline = [
+     {
+       $search: {
+         index: "vector_index",
+         knnBeta: {
+           vector: queryEmbedding,
+           path: "chunks.embedding",
+           k: 10
+         }
+       }
+     },
+     {
+       $match: { brokerId: brokerId }
+     },
+     {
+       $project: {
+         chunks: 1,
+         score: { $meta: "searchScore" }
+       }
+     }
+   ]
+   ```
+
+3. Hybrid Search:
+   - Combines vector similarity with text search
+   - Weights: 70% vector, 30% text
+   - Minimum similarity threshold: 0.7
+
+4. Result Ranking:
+   - Primary: Cosine similarity score
+   - Secondary: PageRank score
+   - Tertiary: Recency (crawledAt)
+
+========================================================
+
+8. QUERY PROCESSING PIPELINE
+-----------------------------
+
+RAG Pipeline Steps:
+
+1. Query Reception:
+   - Receive user query
+   - Extract brokerId
+   - Check cache for existing answer
+
+2. Query Embedding:
+   - Convert query to embedding
+   - Same model as content embeddings
+   - Cache query embedding
+
+3. Vector Search:
+   - Search content collection
+   - Filter by brokerId
+   - Retrieve top 5 chunks
+
+4. Context Building:
+   - Combine retrieved chunks
+   - Add source metadata
+   - Limit to 3000 tokens
+
+5. Prompt Engineering:
+   ```
+   System: You are an expert customer support
+           assistant for {clientName}...
+   User: Here's some information that might help:
+         {context}
+         User Question: {query}
+   ```
+
+6. Answer Generation:
+   - Send to OpenAI GPT-4
+   - Temperature: 0.3 (focused)
+   - Max tokens: 1000
+
+7. Response Processing:
+   - Check for "no answer" patterns
+   - Apply custom no-data response if needed
+   - Format with source citations
+
+8. Caching:
+   - Cache complete response
+   - TTL: 1 hour
+   - Key: MD5(brokerId + query)
+
+========================================================
+
+9. OPENAI INTEGRATION
+---------------------
+
+OpenAI Services Used:
+
+1. Embedding Service:
+   - Model: text-embedding-3-small
+   - Purpose: Convert text to vectors
+   - Cost: ~$0.00002 per 1K tokens
+   - Rate Limit: 3000 RPM
+
+2. Generation Service:
+   - Model: gpt-4o-mini
+   - Purpose: Generate answers
+   - Cost: ~$0.00015 per 1K tokens
+   - Parameters:
+     - temperature: 0.3
+     - max_tokens: 1000
+     - top_p: 0.9
+     - frequency_penalty: 0.3
+     - presence_penalty: 0.3
+
+3. Error Handling:
+   - Retry logic with exponential backoff
+   - Fallback to cached responses
+   - Rate limit management
+
+========================================================
+
+10. API ENDPOINTS
+-----------------
+
+1. POST /api/v1/clients
+   - Create new client
+   - Required: brokerId, name, domain
+
+2. GET /api/v1/clients/:brokerId
+   - Retrieve client details
+
+3. PUT /api/v1/clients/:brokerId
+   - Update client configuration
+   - Can update domains, crawlSettings, noDataResponse
+
+4. POST /api/v1/crawl/:brokerId
+   - Trigger manual crawl
+   - Optional: specific URLs
+
+5. POST /api/v1/query
+   - Process single query
+   - Required: brokerId, query
+   - Returns: answer, sources, confidence
+
+6. POST /api/v1/chat
+   - Chat conversation with context
+   - Required: brokerId, sessionId, query
+   - Maintains conversation history
+
+7. GET /api/v1/health
+   - System health check
+   - Returns: MongoDB, Redis, service status
+
+========================================================
+
+11. TECHNICAL SPECIFICATIONS
+-----------------------------
+
+Performance Metrics:
+- Crawl Speed: ~10 pages/second
+- Embedding Generation: ~100 chunks/second
+- Query Response Time: 2-5 seconds
+- Cache Hit Rate: ~40%
+
+Scalability:
+- Supports 100+ concurrent clients
+- Can handle 10,000+ pages per client
+- Vector search scales to millions of embeddings
+
+Security:
+- API key authentication
+- Data isolation per brokerId
+- No cross-client data access
+- HTTPS only for production
+
+Resource Requirements:
+- MongoDB Atlas: M10 or higher
+- Redis: 2GB minimum
+- Node.js: 16GB RAM recommended
+- OpenAI API: $100/month estimated
+
+Limitations:
+- Max chunk size: 1000 tokens
+- Max context: 3000 tokens
+- Max crawl depth: 5 levels
+- Max response: 1000 tokens
+
+========================================================
+
+CONCLUSION
+----------
+The AI RAG Transformer provides a complete solution for building AI-powered customer support systems. It combines web crawling, vector search, and generative AI to deliver accurate, contextual answers based on a company's own content. The multi-tenant architecture ensures data isolation while the caching layer provides optimal performance.
+
+For support or questions, contact: support@paybito.com
+
+========================================================
+END OF DOCUMENTATION
+========================================================

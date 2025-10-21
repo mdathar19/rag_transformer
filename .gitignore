@@ -45,9 +45,9 @@ desktop.ini
 *~
 
 # Redis
-redis/
-redis.zip
-dump.rdb
+# redis/
+# redis.zip
+# dump.rdb
 
 # Test coverage
 coverage/

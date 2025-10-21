@@ -104,7 +104,7 @@ app.use('/api/v1', routes);
 app.get('/', (req, res) => {
     res.json({
         name: 'AI RAG Transformer',
-        version: '1.0.0',
+        version: '1.0.1',
         status: 'operational',
         endpoints: {
             health: '/api/v1/health',

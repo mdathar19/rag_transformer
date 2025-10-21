@@ -1,6 +1,6 @@
 {
   "name": "ai-rag-transformer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Multi-tenant RAG system for website content",
   "main": "index.js",
   "scripts": {

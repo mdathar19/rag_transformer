@@ -93,7 +93,7 @@ class VectorSearchService {
 
             console.log(`[VectorSearch] Vector search returned ${results.length} raw results`);
             if (results.length > 0) {
-                console.log(`[VectorSearch] Top result score: ${results[0].searchScore}`);
+                console.log(`[VectorSearch] Top result score: ${results[0].score}`);
             }
 
             // If vector search returns 0 results, try keyword fallback

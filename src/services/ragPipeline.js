@@ -353,7 +353,8 @@ class RAGPipeline {
             sources: searchResults.slice(0, 3).map(r => ({
                 url: r.url,
                 title: r.title,
-                score: r.score
+                score: r.score,
+                snippet: this.extractSnippet(r.chunk || r.content, query)
             }))
         };
     }

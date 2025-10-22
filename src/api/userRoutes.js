@@ -50,6 +50,19 @@ router.get('/websites', async (req, res) => {
 // Create a new website (automatically assigns current user as owner)
 router.post('/websites', async (req, res) => {
     try {
+        // Check if user already has a website (one website per user limit)
+        const existingWebsites = await clientManager.listClients(
+            { owner: req.user.brokerId },
+            { limit: 1 }
+        );
+
+        if (existingWebsites.clients && existingWebsites.clients.length > 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'You already have a website. Each user can only create one website. You can add multiple domains/subdomains to your existing website.'
+            });
+        }
+
         // Automatically add owner info from authenticated user
         const clientData = {
             ...req.body,

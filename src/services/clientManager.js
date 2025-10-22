@@ -105,7 +105,15 @@ class ClientManager {
         if (!client) {
             throw new Error(`Client with broker ID ${brokerId} not found`);
         }
-        return client;
+
+        // Enrich with real-time content count from database
+        const db = database.getDb();
+        const contentCount = await db.collection('content').countDocuments({ brokerId });
+
+        return {
+            ...client,
+            contentCount: contentCount
+        };
     }
 
     async updateClient(brokerId, updates) {
@@ -149,6 +157,9 @@ class ClientManager {
 
                 // Delete content
                 await db.collection('content').deleteMany({ brokerId }, { session });
+
+                // Delete content chunks
+                await db.collection('content_chunks').deleteMany({ brokerId }, { session });
 
                 // Delete query logs
                 await db.collection('query_logs').deleteMany({ brokerId }, { session });

@@ -73,6 +73,15 @@ class CrawlerController {
         try {
             this.log(jobId, `[Crawler] Starting crawl job ${jobId} for ${client.name}`);
 
+            // Delete all existing content for this brokerId before starting fresh crawl
+            const db = database.getDb();
+            this.log(jobId, `[Crawler] Clearing old content for ${client.brokerId}...`);
+
+            const contentDeleteResult = await db.collection('content').deleteMany({ brokerId: client.brokerId });
+            const chunksDeleteResult = await db.collection('content_chunks').deleteMany({ brokerId: client.brokerId });
+
+            this.log(jobId, `[Crawler] Deleted ${contentDeleteResult.deletedCount} pages and ${chunksDeleteResult.deletedCount} chunks from previous crawls`);
+
             const allPages = [];
             const allErrors = [];
 
@@ -189,14 +198,18 @@ class CrawlerController {
         const contentChunksCollection = db.collection('content_chunks');
         const processedPages = [];
 
-        console.log(`[Crawler] Processing ${pages.length} pages for broker ${brokerId}`);
+        this.log(jobId, `[Crawler] Processing ${pages.length} pages for broker ${brokerId}`);
 
         for (const pageData of pages) {
             try {
+                // Log scraping progress
+                this.log(jobId, `[Scraper] Processing page: ${pageData.url}`);
+
                 // Process content (clean, chunk, etc.)
                 const processedContent = this.processor.processContent(pageData);
 
                 // Generate embeddings for chunks
+                this.log(jobId, `[Embedding] Generating embeddings for ${processedContent.chunks?.length || 0} chunks`);
                 const contentWithEmbeddings = await this.embeddingService.processContentForEmbeddings(
                     processedContent,
                     brokerId
@@ -228,9 +241,9 @@ class CrawlerController {
                             }
                         );
                         contentId = existingContent._id;
-                        console.log(`[Crawler] Updated content: ${pageData.url}`);
+                        this.log(jobId, `[Crawler] Updated content: ${pageData.url}`);
                     } else {
-                        console.log(`[Crawler] Skipped unchanged: ${pageData.url}`);
+                        this.log(jobId, `[Cache] Skipped unchanged: ${pageData.url}`);
                         continue;
                     }
                 } else {
@@ -242,7 +255,7 @@ class CrawlerController {
                         lastUpdated: new Date()
                     });
                     contentId = insertResult.insertedId;
-                    console.log(`[Crawler] Added new content: ${pageData.url}`);
+                    this.log(jobId, `[Crawler] Added new content: ${pageData.url}`);
                 }
 
                 // Now save chunks to content_chunks collection
@@ -271,13 +284,13 @@ class CrawlerController {
 
                     // Insert chunks in batch
                     await contentChunksCollection.insertMany(chunkDocuments);
-                    console.log(`[Crawler] Saved ${chunkDocuments.length} chunks for ${pageData.url}`);
+                    this.log(jobId, `[Embedding] Saved ${chunkDocuments.length} embedding chunks for ${pageData.url}`);
                 }
 
                 processedPages.push({ ...contentWithEmbeddings, isNew });
 
             } catch (error) {
-                console.error(`[Crawler] Error processing ${pageData.url}:`, error.message);
+                this.log(jobId, `[Crawler] Error processing ${pageData.url}: ${error.message}`, 'error');
                 await this.logJobError(jobId, pageData.url, error.message);
             }
         }

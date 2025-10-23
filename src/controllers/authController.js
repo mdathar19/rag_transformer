@@ -64,7 +64,6 @@ class AuthController {
                 message: 'OTP sent successfully to your email',
                 data: {
                     expiresIn: 900, // 15 minutes in seconds
-                    ...(process.env.NODE_ENV === 'development' && { otp }) // Only in dev
                 }
             });
         } catch (error) {
@@ -197,6 +196,8 @@ class AuthController {
 
             // Update last login
             await userManager.updateUser(user.brokerId, { lastLogin: new Date() });
+            // Ensure widget API key exists
+            await userManager.getWidgetApiKey(user.brokerId); 
 
             // Generate token
             const token = this.generateToken(user);
@@ -283,6 +284,7 @@ class AuthController {
                 companyName: registrationData.companyName,
                 userType: 'USER',
                 profile: registrationData.profile
+// Generate widget API key for new user            try {                await userManager.getWidgetApiKey(user.brokerId);                console.log('[Auth] Widget API key created for new user', user.brokerId);            } catch (error) {                console.error('[Auth] Error creating widget API key:', error);            }
             });
 
             // Send welcome email

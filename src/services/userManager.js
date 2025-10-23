@@ -1,7 +1,7 @@
 const database = require('../config/database');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-
+const { generateApiKey } = require('../utils/apiKey');
 class UserManager {
     constructor() {
         this.collection = null;
@@ -358,9 +358,111 @@ class UserManager {
         console.log(`[UserManager] Deleted user: ${brokerId}`);
         return { success: true, message: 'User deleted successfully' };
     }
+    /**
+     * Get or create widget API key for a user
+     */
+    async getWidgetApiKey(brokerId) {
+        const user = await this.collection.findOne({ brokerId });
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        // Check if widget API key already exists
+        const widgetKey = user.apiKeys?.find(k => k.name === 'Widget API Key');
+        
+        if (widgetKey && widgetKey.expiresAt > new Date()) {
+            return {
+                apiKey: widgetKey.key,
+                createdAt: widgetKey.createdAt,
+                expiresAt: widgetKey.expiresAt
+            };
+        }
+
+        // Generate new widget API key
+        const apiKey = generateApiKey();
+
+        const apiKeyData = {
+            key: apiKey,
+            name: 'Widget API Key',
+            createdAt: new Date(),
+            lastUsed: null,
+            expiresAt: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000) // 10 years
+        };
+
+        // Remove old widget API key if exists
+        await this.collection.updateOne(
+            { brokerId },
+            { $pull: { apiKeys: { name: 'Widget API Key' } } }
+        );
+
+        // Add new widget API key
+        await this.collection.updateOne(
+            { brokerId },
+            {
+                $push: { apiKeys: apiKeyData },
+                $set: { updatedAt: new Date() }
+            }
+        );
+
+        console.log(`[UserManager] Generated widget API key for ${brokerId}`);
+
+        return {
+            apiKey: apiKey,
+            createdAt: apiKeyData.createdAt,
+            expiresAt: apiKeyData.expiresAt
+        };
+    }
+
+    /**
+     * Validate widget API key and check if it belongs to the provided brokerId
+     */
+    async validateWidgetApiKey(apiKey, brokerId) {
+        const { validateApiKeyFormat } = require('../utils/apiKey');
+        
+        if (!validateApiKeyFormat(apiKey)) {
+            return { valid: false, message: 'Invalid API key format' };
+        }
+
+        const user = await this.collection.findOne({
+            'apiKeys.key': apiKey,
+            status: 'active'
+        });
+
+        if (!user) {
+            return { valid: false, message: 'Invalid API key' };
+        }
+
+        // Check if API key is expired
+        const keyData = user.apiKeys.find(k => k.key === apiKey);
+        if (keyData && keyData.expiresAt < new Date()) {
+            return { valid: false, message: 'API key expired' };
+        }
+
+        // Check if API key name is Widget API Key
+        if (keyData && keyData.name !== 'Widget API Key') {
+            return { valid: false, message: 'Not a widget API key' };
+        }
+
+        // Check if brokerId matches
+        if (user.brokerId !== brokerId) {
+            return { valid: false, message: 'API key does not belong to this widget' };
+        }
+
+        // Update last used
+        await this.collection.updateOne(
+            { brokerId: user.brokerId, 'apiKeys.key': apiKey },
+            { $set: { 'apiKeys.$.lastUsed': new Date() } }
+        );
+
+        return { 
+            valid: true, 
+            user: { brokerId: user.brokerId, email: user.email, companyName: user.companyName }
+        };
+    }
 }
 
 // Singleton instance
 const userManager = new UserManager();
 
 module.exports = userManager;
+

@@ -235,6 +235,9 @@ router.get('/crawl/:jobId/logs',authenticateSSE, (req, res) => {
 router.use('/user', userRoutes);
 
 // Admin routes - for admin users (full access)
+// Widget routes - for public widget access (no authentication required)
+router.use('/widget', require('./widgetRoutes'));
+
 router.use('/admin', adminRoutes);
 
 module.exports = router;

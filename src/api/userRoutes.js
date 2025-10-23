@@ -4,6 +4,8 @@ const clientManager = require('../services/clientManager');
 const crawlerController = require('../controllers/crawlerController');
 const ragController = require('../controllers/ragController');
 const chatController = require('../controllers/chatController');
+const widgetManager = require('../services/widgetManager');
+const userManager = require('../services/userManager');
 const { authenticateJWT, rateLimiter } = require('../middleware/auth');
 
 // ============================================================================
@@ -353,6 +355,101 @@ router.get('/dashboard/stats', async (req, res) => {
         });
     } catch (error) {
         console.error('[User API] Dashboard stats error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ============================================================================
+// Widget Settings Routes
+// ============================================================================
+
+// Get widget settings for user's website
+router.get('/widget/:brokerId', async (req, res) => {
+    try {
+        const { brokerId } = req.params;
+
+        // Verify ownership
+        const client = await clientManager.getClient(brokerId);
+        if (client.owner !== req.user.brokerId) {
+            return res.status(403).json({
+                success: false,
+                error: 'Access denied. You do not own this website.'
+            });
+        }
+
+        const settings = await widgetManager.getSettings(brokerId);
+
+        res.json({
+            success: true,
+            data: {
+                settings
+            }
+        });
+    } catch (error) {
+        console.error('[User API] Get widget settings error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Update widget settings for user's website
+router.put('/widget/:brokerId', async (req, res) => {
+    try {
+        const { brokerId } = req.params;
+
+        // Verify ownership
+        const client = await clientManager.getClient(brokerId);
+        if (client.owner !== req.user.brokerId) {
+            return res.status(403).json({
+                success: false,
+                error: 'Access denied. You do not own this website.'
+            });
+        }
+
+        const settings = await widgetManager.updateSettings(brokerId, req.body);
+
+        res.json({
+            success: true,
+            data: {
+                settings
+            },
+            message: 'Widget settings updated successfully'
+        });
+    } catch (error) {
+        console.error('[User API] Update widget settings error:', error);
+        res.status(400).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Get widget API key for user
+router.get('/widget/:brokerId/api-key', async (req, res) => {
+    try {
+        const { brokerId } = req.params;
+        // Verify ownership
+        const client = await clientManager.getClient(brokerId);
+        if (client.owner !== req.user.brokerId) {
+            return res.status(403).json({
+                success: false,
+                error: 'Access denied. You do not own this website.'
+            });
+        }
+
+        const apiKeyData = await userManager.getWidgetApiKey(brokerId);
+
+        res.json({
+            success: true,
+            data: apiKeyData
+        });
+    } catch (error) {
+        console.error('[User API] Get widget API key error:', error);
         res.status(500).json({
             success: false,
             error: error.message

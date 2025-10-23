@@ -22,9 +22,8 @@ class ClientManager {
             owner, // User's brokerId who created this website
             ownerEmail // User's email who created this website
         } = clientData;
-
         // Generate unique broker ID if not provided
-        const brokerId = clientData.brokerId || this.generateBrokerId(name);
+        const brokerId = owner;
 
         // Handle both single domain (legacy) and multiple domains
         let domainsList = domains || [];
@@ -52,7 +51,6 @@ class ClientManager {
                 : (domainsList[0]?.url || ''));
 
         const primaryDomain = domain || clientData.baseUrl || domainsList[0]?.url || '';
-
         const client = {
             brokerId,
             name,

@@ -8,6 +8,7 @@ const cacheService = require('./src/services/cacheService');
 const clientManager = require('./src/services/clientManager');
 const userManager = require('./src/services/userManager');
 const chatController = require('./src/controllers/chatController');
+const widgetManager = require('./src/services/widgetManager');
 const routes = require('./src/api/routes');
 const { corsMiddleware, errorHandler, requestLogger } = require('./src/middleware/auth');
 
@@ -80,6 +81,8 @@ async function initializeServices() {
 
         // Initialize chat controller
         await chatController.initialize();
+        // Initialize widget manager
+        await widgetManager.initialize();
 
         console.log('[Server] All services initialized successfully');
     } catch (error) {
@@ -91,11 +94,24 @@ async function initializeServices() {
 // Configure middleware
 app.use(helmet({
     contentSecurityPolicy: false, // Allow inline scripts for chat UI
+    crossOriginResourcePolicy: false, // Disable CORP to allow widget embedding
+    crossOriginEmbedderPolicy: false
 }));
 app.use(corsMiddleware);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
+
+// Special route for widget script with CORS headers
+app.get('/chat-widget.js', (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); // Dev: no cache, Prod: use max-age=3600
+    res.sendFile(path.join(__dirname, 'public', 'chat-widget.js'));
+});
 
 // Serve static files for chat UI
 app.use(express.static(path.join(__dirname, 'public')));
@@ -117,6 +133,7 @@ app.get('/', (req, res) => {
             search: '/api/v1/search',
             clients: '/api/v1/clients',
             crawl: '/api/v1/crawl',
+            widget: '/chat-widget.js',
             documentation: 'https://github.com/your-repo/docs'
         },
         authentication: 'Required via URL parameters: brokerId, uuid, accessToken'
@@ -159,6 +176,7 @@ async function startServer() {
             console.log(`[Server] Ready to accept requests`);
             console.log(`\n[Server] Access Points:`);
             console.log(`  🌐 Chat UI: http://localhost:${PORT}/chat-bot.html?brokerId=<BROKER_ID>&uuid=<UUID>&accessToken=<TOKEN>`);
+            console.log(`  🔧 Widget Script: http://localhost:${PORT}/chat-widget.js`);
             console.log(`  📊 Health Check: http://localhost:${PORT}/api/v1/health`);
             console.log(`  🔍 Query Endpoint: POST http://localhost:${PORT}/api/v1/query`);
             console.log(`  💬 Chat Endpoint: POST http://localhost:${PORT}/api/v1/chat`);

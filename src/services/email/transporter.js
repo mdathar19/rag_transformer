@@ -6,7 +6,7 @@ const transporter = nodemailer.createTransport({
   port: process.env.EMAIL_PORT || 587,
   secure: false, // Use STARTTLS
   auth: {
-    user: process.env.EMAIL_USER || 'no-reply@runit.in',
+    user: process.env.EMAIL_USER || 'support@ragsense.co',
     pass: process.env.EMAIL_PASSWORD // Should be set in environment variables
   },
   tls: {

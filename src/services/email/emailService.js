@@ -23,9 +23,9 @@ exports.sendOtpEmail = async (params) => {
 
     // Send email
     const result = await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'no-reply@runit.in',
+      from: process.env.EMAIL_FROM || 'support@ragsense.co',
       to: email,
-      subject: 'RunIt Lab - Email Verification OTP',
+      subject: 'Ragsense Lab - Email Verification OTP',
       html: htmlContent
     });
 
@@ -79,11 +79,11 @@ exports.sendWelcomeEmail = async (params) => {
       </head>
       <body>
           <div class="container">
-              <h1>🎉 Welcome to RunIt Lab!</h1>
+              <h1>🎉 Welcome to Ragsense Lab!</h1>
           </div>
           <div class="content">
               <p>Hi <strong>${companyName}</strong>,</p>
-              <p>Thank you for joining RunIt Lab!</p>
+              <p>Thank you for joining Ragsense Lab!</p>
               <p>You can now start adding websites, crawling content, and querying your data using our AI-powered RAG system.</p>
               <p><strong>Get Started:</strong></p>
               <ul>
@@ -91,16 +91,16 @@ exports.sendWelcomeEmail = async (params) => {
                   <li>Crawl and index content</li>
                   <li>Start asking questions</li>
               </ul>
-              <p>If you need any help, feel free to reach out to our support team.</p>
+              <p>If you need any help, feel free to reach out to our support team. <a href="mailto:support@ragsense.co" style="color: #667eea;">support@ragsense.co</a></p>
           </div>
       </body>
       </html>
     `;
 
     const result = await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'no-reply@runit.in',
+      from: process.env.EMAIL_FROM || 'support@ragsense.co',
       to: email,
-      subject: 'Welcome to RunIt Lab!',
+      subject: 'Welcome to Ragsense Lab!',
       html: htmlContent
     });
 

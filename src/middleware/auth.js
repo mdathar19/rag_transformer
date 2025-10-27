@@ -263,26 +263,23 @@ const customRateLimiter = async (req, res, next) => {
     }
 };
 
-// CORS middleware
-const corsMiddleware = (req, res, next) => {
-    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['*'];
-    const origin = req.headers.origin;
-
-    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-        res.setHeader('Access-Control-Allow-Origin', origin || '*');
-    }
-
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key, X-Broker-Id, X-User-Id, X-UUID');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-
-    if (req.method === 'OPTIONS') {
-        res.sendStatus(200);
-    } else {
-        next();
-    }
+const corsMiddleware = {
+    origin: function (origin, callback) {
+        const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['*'];
+        
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Broker-Id', 'X-User-Id', 'X-UUID']
 };
-
 // Error handling middleware
 const errorHandler = (err, req, res, next) => {
     console.error('[Error]', err);

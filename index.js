@@ -97,7 +97,7 @@ app.use(helmet({
     crossOriginResourcePolicy: false, // Disable CORP to allow widget embedding
     crossOriginEmbedderPolicy: false
 }));
-app.use(corsMiddleware);
+app.use(cors(corsMiddleware));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
